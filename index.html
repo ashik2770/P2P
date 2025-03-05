@@ -32,14 +32,12 @@
         </header>
 
         <div class="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
-            <!-- Connect Section -->
             <div class="bg-gray-800/80 p-4 sm:p-6 rounded-xl border border-purple-500/20 lg:col-span-1">
                 <h2 class="text-lg sm:text-xl font-bold mb-4 text-purple-300">Connect</h2>
                 <input id="targetId" type="text" placeholder="Enter User ID to connect" class="w-full p-3 mb-4 bg-gray-700/50 border border-purple-500/20 rounded-lg focus:outline-none focus:border-purple-500 text-white text-sm sm:text-base">
                 <button onclick="startCall()" class="w-full p-3 bg-green-600 hover:bg-green-700 rounded-lg transition-all duration-300 text-sm sm:text-base">Start Video Call</button>
             </div>
 
-            <!-- Video Call Section -->
             <div class="bg-gray-800/80 p-4 sm:p-6 rounded-xl border border-purple-500/20 lg:col-span-2">
                 <div class="flex flex-col sm:flex-row gap-4">
                     <div class="flex-1">
@@ -54,7 +52,6 @@
                 <button onclick="endCall()" class="w-full mt-4 p-3 bg-red-600 hover:bg-red-700 rounded-lg transition-all duration-300 hidden text-sm sm:text-base" id="endCallBtn">End Call</button>
             </div>
 
-            <!-- Chat Section -->
             <div class="bg-gray-800/80 p-4 sm:p-6 rounded-xl border border-purple-500/20 lg:col-span-3">
                 <h2 class="text-lg sm:text-xl font-bold mb-4 text-purple-300">Messages</h2>
                 <div id="messages" class="h-64 sm:h-72 overflow-y-auto mb-4 p-4 bg-gray-700/50 rounded-lg"></div>
@@ -75,6 +72,21 @@
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         };
 
+        // Mock signaling server (in real app, this would be a WebSocket server)
+        const signalingServer = {
+            connections: {},
+            send: function(userId, data) {
+                if (this.connections[userId]) {
+                    this.connections[userId](data);
+                } else {
+                    addMessage('System', `Error: User ${userId} not found`);
+                }
+            },
+            register: function(userId, callback) {
+                this.connections[userId] = callback;
+            }
+        };
+
         // Profile Setup
         function saveProfile() {
             const name = document.getElementById('userName').value;
@@ -86,6 +98,9 @@
                 document.getElementById('setupModal').classList.add('hidden');
                 document.getElementById('mainInterface').classList.remove('hidden');
                 updateConnectionStatus('Disconnected');
+                
+                // Register with signaling server
+                signalingServer.register(id, handleSignalingMessage);
             }
         }
 
@@ -94,23 +109,27 @@
             location.reload();
         }
 
-        // Check if profile exists
         if (localStorage.getItem('userName') && localStorage.getItem('userId')) {
             document.getElementById('setupModal').classList.add('hidden');
             document.getElementById('mainInterface').classList.remove('hidden');
             document.getElementById('currentUser').textContent = 
                 `${localStorage.getItem('userName')} (ID: ${localStorage.getItem('userId')})`;
             updateConnectionStatus('Disconnected');
+            signalingServer.register(localStorage.getItem('userId'), handleSignalingMessage);
         }
 
-        // Connection Status Update
         function updateConnectionStatus(status) {
             statusElement.textContent = status;
             statusElement.style.background = status === 'Connected' ? '#22C55E' : '#4B5563';
         }
 
-        // Video Call Functions
         async function startCall() {
+            const targetId = document.getElementById('targetId').value.trim();
+            if (!targetId) {
+                addMessage('System', 'Please enter a target ID');
+                return;
+            }
+
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 document.getElementById('localVideo').srcObject = localStream;
@@ -126,7 +145,10 @@
 
                 peerConnection.onicecandidate = event => {
                     if (event.candidate) {
-                        console.log('ICE candidate:', event.candidate);
+                        signalingServer.send(targetId, {
+                            type: 'candidate',
+                            candidate: event.candidate
+                        });
                     }
                 };
 
@@ -141,11 +163,69 @@
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
                 
+                signalingServer.send(targetId, {
+                    type: 'offer',
+                    offer: offer
+                });
+
                 document.getElementById('endCallBtn').classList.remove('hidden');
-                addMessage('System', 'Video call started. Share your ID with someone to connect!');
+                addMessage('System', `Calling ${targetId}...`);
             } catch (error) {
                 console.error('Error starting call:', error);
-                addMessage('System', 'Error starting video call');
+                addMessage('System', 'Error starting video call: ' + error.message);
+            }
+        }
+
+        async function handleSignalingMessage(data) {
+            if (!peerConnection) {
+                peerConnection = new RTCPeerConnection(configuration);
+                
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('localVideo').srcObject = localStream;
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                peerConnection.ontrack = event => {
+                    document.getElementById('remoteVideo').srcObject = event.streams[0];
+                    updateConnectionStatus('Connected');
+                };
+
+                peerConnection.onicecandidate = event => {
+                    if (event.candidate) {
+                        signalingServer.send(document.getElementById('targetId').value || data.from, {
+                            type: 'candidate',
+                            candidate: event.candidate
+                        });
+                    }
+                };
+
+                peerConnection.onconnectionstatechange = () => {
+                    if (peerConnection.connectionState === 'connected') {
+                        updateConnectionStatus('Connected');
+                    } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'closed') {
+                        updateConnectionStatus('Disconnected');
+                    }
+                };
+
+                document.getElementById('endCallBtn').classList.remove('hidden');
+            }
+
+            try {
+                if (data.type === 'offer') {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    signalingServer.send(data.from || document.getElementById('targetId').value, {
+                        type: 'answer',
+                        answer: answer
+                    });
+                    addMessage('System', 'Incoming call accepted');
+                } else if (data.type === 'answer') {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                } else if (data.type === 'candidate') {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                }
+            } catch (error) {
+                addMessage('System', 'Error handling signaling: ' + error.message);
             }
         }
 
@@ -154,6 +234,7 @@
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
             }
+            peerConnection = null;
             document.getElementById('localVideo').srcObject = null;
             document.getElementById('remoteVideo').srcObject = null;
             document.getElementById('endCallBtn').classList.add('hidden');
@@ -161,7 +242,6 @@
             addMessage('System', 'Call ended');
         }
 
-        // Messaging Functions
         function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
@@ -183,7 +263,6 @@
             messages.scrollTop = messages.scrollHeight;
         }
 
-        // Handle Enter key for sending messages
         document.getElementById('messageInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
