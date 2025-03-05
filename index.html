@@ -72,18 +72,22 @@
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         };
 
-        // Mock signaling server (in real app, this would be a WebSocket server)
+        // Simulated signaling server with better connection handling
         const signalingServer = {
             connections: {},
-            send: function(userId, data) {
-                if (this.connections[userId]) {
-                    this.connections[userId](data);
-                } else {
-                    addMessage('System', `Error: User ${userId} not found`);
-                }
-            },
             register: function(userId, callback) {
                 this.connections[userId] = callback;
+                console.log(`Registered user: ${userId}`);
+            },
+            send: function(targetId, data) {
+                data.from = localStorage.getItem('userId');
+                if (this.connections[targetId]) {
+                    this.connections[targetId](data);
+                    return true;
+                } else {
+                    addMessage('System', `Error: User ${targetId} not found or offline`);
+                    return false;
+                }
             }
         };
 
@@ -99,8 +103,8 @@
                 document.getElementById('mainInterface').classList.remove('hidden');
                 updateConnectionStatus('Disconnected');
                 
-                // Register with signaling server
                 signalingServer.register(id, handleSignalingMessage);
+                addMessage('System', 'Profile saved. You can now connect with others using your ID: ' + id);
             }
         }
 
@@ -129,6 +133,10 @@
                 addMessage('System', 'Please enter a target ID');
                 return;
             }
+            if (targetId === localStorage.getItem('userId')) {
+                addMessage('System', 'Cannot call yourself');
+                return;
+            }
 
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -141,6 +149,7 @@
                 peerConnection.ontrack = event => {
                     document.getElementById('remoteVideo').srcObject = event.streams[0];
                     updateConnectionStatus('Connected');
+                    addMessage('System', 'Connected to ' + targetId);
                 };
 
                 peerConnection.onicecandidate = event => {
@@ -157,19 +166,20 @@
                         updateConnectionStatus('Connected');
                     } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'closed') {
                         updateConnectionStatus('Disconnected');
+                        addMessage('System', 'Connection lost');
                     }
                 };
 
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
                 
-                signalingServer.send(targetId, {
+                if (signalingServer.send(targetId, {
                     type: 'offer',
                     offer: offer
-                });
-
-                document.getElementById('endCallBtn').classList.remove('hidden');
-                addMessage('System', `Calling ${targetId}...`);
+                })) {
+                    document.getElementById('endCallBtn').classList.remove('hidden');
+                    addMessage('System', `Calling ${targetId}...`);
+                }
             } catch (error) {
                 console.error('Error starting call:', error);
                 addMessage('System', 'Error starting video call: ' + error.message);
@@ -177,6 +187,9 @@
         }
 
         async function handleSignalingMessage(data) {
+            const fromId = data.from;
+            document.getElementById('targetId').value = fromId; // Auto-fill the caller ID
+
             if (!peerConnection) {
                 peerConnection = new RTCPeerConnection(configuration);
                 
@@ -187,11 +200,12 @@
                 peerConnection.ontrack = event => {
                     document.getElementById('remoteVideo').srcObject = event.streams[0];
                     updateConnectionStatus('Connected');
+                    addMessage('System', 'Connected to ' + fromId);
                 };
 
                 peerConnection.onicecandidate = event => {
                     if (event.candidate) {
-                        signalingServer.send(document.getElementById('targetId').value || data.from, {
+                        signalingServer.send(fromId, {
                             type: 'candidate',
                             candidate: event.candidate
                         });
@@ -203,6 +217,7 @@
                         updateConnectionStatus('Connected');
                     } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'closed') {
                         updateConnectionStatus('Disconnected');
+                        addMessage('System', 'Connection lost');
                     }
                 };
 
@@ -211,21 +226,22 @@
 
             try {
                 if (data.type === 'offer') {
+                    addMessage('System', `Incoming call from ${fromId}`);
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
                     const answer = await peerConnection.createAnswer();
                     await peerConnection.setLocalDescription(answer);
-                    signalingServer.send(data.from || document.getElementById('targetId').value, {
+                    signalingServer.send(fromId, {
                         type: 'answer',
                         answer: answer
                     });
-                    addMessage('System', 'Incoming call accepted');
                 } else if (data.type === 'answer') {
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
                 } else if (data.type === 'candidate') {
                     await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
                 }
             } catch (error) {
-                addMessage('System', 'Error handling signaling: ' + error.message);
+                console.error('Signaling error:', error);
+                addMessage('System', 'Error handling call: ' + error.message);
             }
         }
 
