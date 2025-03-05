@@ -28,6 +28,22 @@
             Accept Call
         </button>
 
+        <div class="mt-4">
+            <label class="block text-lg">Offer / Answer:</label>
+            <textarea id="offerBox" class="w-full p-2 text-black rounded-md" rows="3" readonly></textarea>
+            <button onclick="copyToClipboard()" class="w-full p-2 mt-2 bg-yellow-500 hover:bg-yellow-600 rounded-md">
+                Copy & Send
+            </button>
+        </div>
+
+        <div class="mt-4">
+            <label class="block text-lg">Enter Friend's Offer / Answer:</label>
+            <textarea id="friendOffer" class="w-full p-2 text-black rounded-md" rows="3"></textarea>
+            <button onclick="acceptFriendOffer()" class="w-full p-2 mt-2 bg-purple-500 hover:bg-purple-600 rounded-md">
+                Accept
+            </button>
+        </div>
+
         <div class="flex gap-4 mt-6">
             <video id="localVideo" autoplay playsinline class="w-1/2 border-2 border-blue-400 rounded-lg"></video>
             <video id="remoteVideo" autoplay playsinline class="w-1/2 border-2 border-green-400 rounded-lg"></video>
@@ -39,9 +55,11 @@ const localVideo = document.getElementById('localVideo');
 const remoteVideo = document.getElementById('remoteVideo');
 const myIdField = document.getElementById('myId');
 const friendIdField = document.getElementById('friendId');
+const offerBox = document.getElementById('offerBox');
+const friendOfferBox = document.getElementById('friendOffer');
 
 const peer = new RTCPeerConnection();
-let offerSignal = null; 
+let offerSignal = null;
 
 // Generate a random user ID
 let userId = Math.random().toString(36).substring(2, 10);
@@ -70,20 +88,28 @@ function startCall() {
     peer.createOffer().then(async (offer) => {
         await peer.setLocalDescription(offer);
         offerSignal = JSON.stringify(offer);
-        alert("Send this Offer to Your Friend:\n" + offerSignal);
+        offerBox.value = offerSignal;
     }).catch(error => console.error("Offer creation failed:", error));
 }
 
-// Enter Friend's Offer and Connect
-function acceptCall() {
-    let friendOffer = prompt("Enter Friend's Offer:");
+// Copy Offer to Clipboard
+function copyToClipboard() {
+    offerBox.select();
+    document.execCommand("copy");
+    alert("Copied! Send this to your friend.");
+}
+
+// Accept Friend's Offer
+function acceptFriendOffer() {
+    let friendOffer = friendOfferBox.value;
     if (friendOffer) {
         let parsedOffer = JSON.parse(friendOffer);
         peer.setRemoteDescription(new RTCSessionDescription(parsedOffer))
             .then(() => {
                 peer.createAnswer().then(async (answer) => {
                     await peer.setLocalDescription(answer);
-                    alert("Send this Answer to Your Friend:\n" + JSON.stringify(answer));
+                    offerBox.value = JSON.stringify(answer);
+                    alert("Send this Answer to Your Friend.");
                 }).catch(error => console.error("Answer creation failed:", error));
             })
             .catch(error => console.error("Setting remote description failed:", error));
