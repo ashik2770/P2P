@@ -3,338 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FuturaCall - Advanced Communication Hub</title>
+    <title>FuturaChat - Modern Messaging & Video</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .futuristic-bg {
-            background: linear-gradient(135deg, #1a1b41 0%, #2a2b5f 100%);
-        }
-        .glass-effect {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        .video-container {
-            position: relative;
-            background: #000;
-            border-radius: 0.5rem;
-            overflow: hidden;
-        }
-        .video-overlay {
-            position: absolute;
-            bottom: 0.5rem;
-            left: 0.5rem;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
-<body class="futuristic-bg min-h-screen text-white font-sans">
-    <div class="container mx-auto p-4">
-        <!-- Header -->
-        <header class="glass-effect rounded-lg p-4 mb-6 flex justify-between items-center">
-            <div>
-                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600">
-                    FuturaCall
-                </h1>
-                <p class="text-sm opacity-75">Advanced Communication Platform</p>
+<body class="bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 min-h-screen font-['Orbitron'] text-gray-100 overflow-x-hidden">
+    <!-- Setup Modal -->
+    <div id="setupModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800/90 p-6 rounded-xl shadow-2xl w-full max-w-md border border-purple-500/50">
+            <h2 class="text-xl sm:text-2xl font-bold mb-4 text-purple-300">Setup Your Profile</h2>
+            <input id="userName" type="text" placeholder="Your Name" class="w-full p-3 mb-4 bg-gray-700/50 border border-purple-500/20 rounded-lg focus:outline-none focus:border-purple-500 text-white text-sm sm:text-base">
+            <input id="userId" type="text" placeholder="Your Unique ID" class="w-full p-3 mb-4 bg-gray-700/50 border border-purple-500/20 rounded-lg focus:outline-none focus:border-purple-500 text-white text-sm sm:text-base">
+            <button onclick="saveProfile()" class="w-full p-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-all duration-300 text-sm sm:text-base">Save</button>
+        </div>
+    </div>
+
+    <!-- Main Interface -->
+    <div id="mainInterface" class="hidden container mx-auto p-4 sm:p-6 max-w-7xl">
+        <header class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            <div class="flex items-center gap-3 flex-col sm:flex-row text-center sm:text-left">
+                <h1 class="text-2xl sm:text-3xl font-bold text-purple-300">FuturaChat</h1>
+                <div class="flex items-center gap-2">
+                    <span id="currentUser" class="text-xs sm:text-sm text-gray-400"></span>
+                    <span id="connectionStatus" class="px-2 py-1 rounded-full text-xs" style="background: #4B5563">Disconnected</span>
+                </div>
             </div>
-            <div id="userId" class="text-sm">Your ID: <span id="userIdValue">Generating...</span></div>
+            <button onclick="resetProfile()" class="px-4 py-2 bg-red-600/50 hover:bg-red-700/50 rounded-lg transition-all duration-300 text-sm sm:text-base">Reset Profile</button>
         </header>
 
-        <!-- Main Content -->
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <!-- Video Section -->
-            <div class="lg:col-span-3">
-                <div class="glass-effect rounded-lg p-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div class="video-container">
-                            <video id="localVideo" autoplay playsinline muted></video>
-                            <div class="video-overlay">You</div>
-                        </div>
-                        <div class="video-container">
-                            <video id="remoteVideo" autoplay playsinline></video>
-                            <div class="video-overlay">Remote User</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Controls -->
-                    <div class="flex flex-wrap gap-4 justify-center">
-                        <input id="remoteId" class="bg-transparent border rounded-lg p-2 w-48" placeholder="Enter Remote ID">
-                        <button id="connectBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-all">
-                            Connect
-                        </button>
-                        <button id="endCallBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-all" disabled>
-                            End Call
-                        </button>
-                        <button id="screenShareBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-all" disabled>
-                            Share Screen
-                        </button>
-                        <button id="recordBtn" class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg transition-all" disabled>
-                            Record
-                        </button>
-                        <button id="muteBtn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg transition-all" disabled>
-                            Mute
-                        </button>
-                    </div>
-                </div>
+        <div class="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
+            <!-- Connect Section -->
+            <div class="bg-gray-800/80 p-4 sm:p-6 rounded-xl border border-purple-500/20 lg:col-span-1">
+                <h2 class="text-lg sm:text-xl font-bold mb-4 text-purple-300">Connect</h2>
+                <input id="targetId" type="text" placeholder="Enter User ID to connect" class="w-full p-3 mb-4 bg-gray-700/50 border border-purple-500/20 rounded-lg focus:outline-none focus:border-purple-500 text-white text-sm sm:text-base">
+                <button onclick="startCall()" class="w-full p-3 bg-green-600 hover:bg-green-700 rounded-lg transition-all duration-300 text-sm sm:text-base">Start Video Call</button>
             </div>
 
-            <!-- Chat & Controls -->
-            <div class="space-y-6">
-                <div class="glass-effect rounded-lg p-4 h-[400px] flex flex-col">
-                    <h2 class="text-xl font-semibold mb-4">Chat</h2>
-                    <div id="chatMessages" class="flex-1 overflow-y-auto mb-4 space-y-2"></div>
-                    <div class="flex gap-2">
-                        <input id="chatInput" class="flex-1 bg-transparent border rounded-lg p-2" placeholder="Type a message...">
-                        <button id="sendChatBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg">Send</button>
+            <!-- Video Call Section -->
+            <div class="bg-gray-800/80 p-4 sm:p-6 rounded-xl border border-purple-500/20 lg:col-span-2">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1">
+                        <video id="localVideo" autoplay muted class="w-full rounded-lg border border-purple-500/20 max-h-[40vh] object-cover"></video>
+                        <p class="text-center mt-2 text-xs sm:text-sm text-gray-400">You</p>
+                    </div>
+                    <div class="flex-1">
+                        <video id="remoteVideo" autoplay class="w-full rounded-lg border border-purple-500/20 max-h-[40vh] object-cover"></video>
+                        <p class="text-center mt-2 text-xs sm:text-sm text-gray-400">Remote</p>
                     </div>
                 </div>
-                <div class="glass-effect rounded-lg p-4">
-                    <h3 class="text-lg font-semibold mb-2">Call Stats</h3>
-                    <div id="callStats" class="text-sm space-y-1"></div>
+                <button onclick="endCall()" class="w-full mt-4 p-3 bg-red-600 hover:bg-red-700 rounded-lg transition-all duration-300 hidden text-sm sm:text-base" id="endCallBtn">End Call</button>
+            </div>
+
+            <!-- Chat Section -->
+            <div class="bg-gray-800/80 p-4 sm:p-6 rounded-xl border border-purple-500/20 lg:col-span-3">
+                <h2 class="text-lg sm:text-xl font-bold mb-4 text-purple-300">Messages</h2>
+                <div id="messages" class="h-64 sm:h-72 overflow-y-auto mb-4 p-4 bg-gray-700/50 rounded-lg"></div>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input id="messageInput" type="text" placeholder="Type a message..." class="flex-1 p-3 bg-gray-700/50 border border-purple-500/20 rounded-lg focus:outline-none focus:border-purple-500 text-white text-sm sm:text-base">
+                    <button onclick="sendMessage()" class="px-4 sm:px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-all duration-300 text-sm sm:text-base">Send</button>
                 </div>
             </div>
-        </div>
-
-        <!-- Status -->
-        <div id="status" class="mt-6 text-center text-sm opacity-75">
-            Status: Disconnected
         </div>
     </div>
 
     <script>
-        // WebRTC Configuration
-        const configuration = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ],
-            iceCandidatePoolSize: 10
-        };
-
-        // DOM Elements
-        const localVideo = document.getElementById('localVideo');
-        const remoteVideo = document.getElementById('remoteVideo');
-        const connectBtn = document.getElementById('connectBtn');
-        const endCallBtn = document.getElementById('endCallBtn');
-        const screenShareBtn = document.getElementById('screenShareBtn');
-        const recordBtn = document.getElementById('recordBtn');
-        const muteBtn = document.getElementById('muteBtn');
-        const chatInput = document.getElementById('chatInput');
-        const sendChatBtn = document.getElementById('sendChatBtn');
-        const chatMessages = document.getElementById('chatMessages');
-        const status = document.getElementById('status');
-        const remoteId = document.getElementById('remoteId');
-        const userIdValue = document.getElementById('userIdValue');
-        const callStats = document.getElementById('callStats');
-
-        // State Variables
-        let peerConnection;
         let localStream;
-        let remoteStream;
-        let mediaRecorder;
-        let recordedChunks = [];
-        let isMuted = false;
-        let localUserId = Math.random().toString(36).substring(2, 10);
-        let dataChannel;
-
-        // Simulated Signaling Server (for demo purposes)
-        const signalingServer = {
-            connections: new Map(),
-            send: function(userId, message) {
-                setTimeout(() => {
-                    if (this.connections.has(userId)) {
-                        this.connections.get(userId)(message);
-                    }
-                }, 100);
-            },
-            register: function(userId, callback) {
-                this.connections.set(userId, callback);
-            }
+        let peerConnection;
+        const messages = document.getElementById('messages');
+        const statusElement = document.getElementById('connectionStatus');
+        const configuration = {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         };
 
-        // Initialize
-        userIdValue.textContent = localUserId;
-        signalingServer.register(localUserId, handleSignalingMessage);
+        // Profile Setup
+        function saveProfile() {
+            const name = document.getElementById('userName').value;
+            const id = document.getElementById('userId').value;
+            if (name && id) {
+                localStorage.setItem('userName', name);
+                localStorage.setItem('userId', id);
+                document.getElementById('currentUser').textContent = `${name} (ID: ${id})`;
+                document.getElementById('setupModal').classList.add('hidden');
+                document.getElementById('mainInterface').classList.remove('hidden');
+                updateConnectionStatus('Disconnected');
+            }
+        }
 
+        function resetProfile() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        // Check if profile exists
+        if (localStorage.getItem('userName') && localStorage.getItem('userId')) {
+            document.getElementById('setupModal').classList.add('hidden');
+            document.getElementById('mainInterface').classList.remove('hidden');
+            document.getElementById('currentUser').textContent = 
+                `${localStorage.getItem('userName')} (ID: ${localStorage.getItem('userId')})`;
+            updateConnectionStatus('Disconnected');
+        }
+
+        // Connection Status Update
+        function updateConnectionStatus(status) {
+            statusElement.textContent = status;
+            statusElement.style.background = status === 'Connected' ? '#22C55E' : '#4B5563';
+        }
+
+        // Video Call Functions
         async function startCall() {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                localVideo.srcObject = localStream;
-                await createPeerConnection();
-                toggleButtons(true);
-                status.textContent = 'Status: Ready to connect';
+                document.getElementById('localVideo').srcObject = localStream;
+
+                peerConnection = new RTCPeerConnection(configuration);
+                
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                peerConnection.ontrack = event => {
+                    document.getElementById('remoteVideo').srcObject = event.streams[0];
+                    updateConnectionStatus('Connected');
+                };
+
+                peerConnection.onicecandidate = event => {
+                    if (event.candidate) {
+                        console.log('ICE candidate:', event.candidate);
+                    }
+                };
+
+                peerConnection.onconnectionstatechange = () => {
+                    if (peerConnection.connectionState === 'connected') {
+                        updateConnectionStatus('Connected');
+                    } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'closed') {
+                        updateConnectionStatus('Disconnected');
+                    }
+                };
+
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                
+                document.getElementById('endCallBtn').classList.remove('hidden');
+                addMessage('System', 'Video call started. Share your ID with someone to connect!');
             } catch (error) {
-                console.error('Media error:', error);
-                status.textContent = `Status: Error - ${error.message}`;
-            }
-        }
-
-        async function createPeerConnection() {
-            peerConnection = new RTCPeerConnection(configuration);
-
-            // Data Channel for Chat
-            dataChannel = peerConnection.createDataChannel('chat');
-            dataChannel.onmessage = (event) => displayMessage('Remote', event.data);
-            dataChannel.onopen = () => console.log('Data channel opened');
-
-            // Add local stream tracks
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-            peerConnection.ontrack = ({ streams: [stream] }) => {
-                remoteStream = stream;
-                remoteVideo.srcObject = stream;
-                status.textContent = 'Status: Connected';
-                updateCallStats();
-            };
-
-            peerConnection.onicecandidate = ({ candidate }) => {
-                if (candidate) {
-                    signalingServer.send(remoteId.value, { type: 'candidate', candidate });
-                }
-            };
-
-            peerConnection.onconnectionstatechange = () => {
-                status.textContent = `Status: ${peerConnection.connectionState}`;
-                if (peerConnection.connectionState === 'disconnected') endCall();
-            };
-        }
-
-        async function initiateCall() {
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            signalingServer.send(remoteId.value, { type: 'offer', offer });
-        }
-
-        async function handleSignalingMessage(message) {
-            try {
-                if (message.type === 'offer') {
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
-                    const answer = await peerConnection.createAnswer();
-                    await peerConnection.setLocalDescription(answer);
-                    signalingServer.send(remoteId.value, { type: 'answer', answer });
-                } else if (message.type === 'answer') {
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
-                } else if (message.type === 'candidate') {
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
-                }
-            } catch (error) {
-                console.error('Signaling error:', error);
+                console.error('Error starting call:', error);
+                addMessage('System', 'Error starting video call');
             }
         }
 
         function endCall() {
             if (peerConnection) peerConnection.close();
-            if (localStream) localStream.getTracks().forEach(track => track.stop());
-            if (mediaRecorder?.state === 'recording') mediaRecorder.stop();
-            localVideo.srcObject = null;
-            remoteVideo.srcObject = null;
-            toggleButtons(false);
-            status.textContent = 'Status: Disconnected';
-            peerConnection = null;
-            mediaRecorder = null;
-            recordedChunks = [];
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            document.getElementById('localVideo').srcObject = null;
+            document.getElementById('remoteVideo').srcObject = null;
+            document.getElementById('endCallBtn').classList.add('hidden');
+            updateConnectionStatus('Disconnected');
+            addMessage('System', 'Call ended');
         }
 
-        async function updateCallStats() {
-            if (!peerConnection) return;
-            const stats = await peerConnection.getStats();
-            let statsOutput = '';
-            stats.forEach(report => {
-                if (report.type === 'inbound-rtp' && report.kind === 'video') {
-                    statsOutput += `FPS: ${report.framesPerSecond || 'N/A'}<br>`;
-                    statsOutput += `Bitrate: ${Math.round(report.bytesReceived / 1000)} kB/s<br>`;
-                }
-            });
-            callStats.innerHTML = statsOutput;
-            setTimeout(updateCallStats, 1000);
-        }
-
-        // Event Listeners
-        connectBtn.addEventListener('click', async () => {
-            if (!remoteId.value) {
-                status.textContent = 'Status: Please enter a remote ID';
-                return;
-            }
-            if (!peerConnection) await startCall();
-            await initiateCall();
-        });
-
-        endCallBtn.addEventListener('click', endCall);
-
-        screenShareBtn.addEventListener('click', async () => {
-            try {
-                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                const screenTrack = screenStream.getTracks()[0];
-                const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
-                await sender.replaceTrack(screenTrack);
-                screenTrack.onended = () => sender.replaceTrack(localStream.getVideoTracks()[0]);
-            } catch (error) {
-                console.error('Screen share error:', error);
-            }
-        });
-
-        recordBtn.addEventListener('click', () => {
-            if (!mediaRecorder) {
-                recordedChunks = [];
-                mediaRecorder = new MediaRecorder(localStream);
-                mediaRecorder.ondataavailable = (e) => recordedChunks.push(e.data);
-                mediaRecorder.onstop = () => {
-                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `recording-${Date.now()}.webm`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                };
-                mediaRecorder.start();
-                recordBtn.textContent = 'Stop Recording';
-            } else {
-                mediaRecorder.stop();
-                mediaRecorder = null;
-                recordBtn.textContent = 'Record';
-            }
-        });
-
-        muteBtn.addEventListener('click', () => {
-            isMuted = !isMuted;
-            localStream.getAudioTracks()[0].enabled = !isMuted;
-            muteBtn.textContent = isMuted ? 'Unmute' : 'Mute';
-        });
-
-        sendChatBtn.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => e.key === 'Enter' && sendMessage());
-
+        // Messaging Functions
         function sendMessage() {
-            const message = chatInput.value.trim();
-            if (message && dataChannel?.readyState === 'open') {
-                dataChannel.send(message);
-                displayMessage('You', message);
-                chatInput.value = '';
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (message) {
+                addMessage(localStorage.getItem('userName'), message);
+                input.value = '';
             }
         }
 
-        function displayMessage(sender, message) {
-            const div = document.createElement('div');
-            div.className = `p-2 rounded-lg ${sender === 'You' ? 'bg-blue-600/50 ml-auto' : 'bg-purple-600/50'} max-w-[80%]`;
-            div.textContent = `${sender}: ${message}`;
-            chatMessages.appendChild(div);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+        function addMessage(sender, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `p-3 mb-2 rounded-lg ${
+                sender === localStorage.getItem('userName') 
+                ? 'bg-purple-600/50 ml-auto' 
+                : 'bg-gray-700/50'
+            } max-w-[70%] break-words`;
+            messageDiv.innerHTML = `<strong class="text-purple-300">${sender}:</strong> ${text}`;
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
         }
 
-        function toggleButtons(isActive) {
-            connectBtn.disabled = isActive;
-            endCallBtn.disabled = !isActive;
-            screenShareBtn.disabled = !isActive;
-            recordBtn.disabled = !isActive;
-            muteBtn.disabled = !isActive;
-        }
-
-        // Initial setup
-        toggleButtons(false);
+        // Handle Enter key for sending messages
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
     </script>
 </body>
 </html>
