@@ -3,285 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FuturaChat - Modern Messaging & Video</title>
+    <title>Local Video Call</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 min-h-screen font-['Orbitron'] text-gray-100 overflow-x-hidden">
-    <!-- Setup Modal -->
-    <div id="setupModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div class="bg-gray-800/90 p-6 rounded-xl shadow-2xl w-full max-w-md border border-purple-500/50">
-            <h2 class="text-xl sm:text-2xl font-bold mb-4 text-purple-300">Setup Your Profile</h2>
-            <input id="userName" type="text" placeholder="Your Name" class="w-full p-3 mb-4 bg-gray-700/50 border border-purple-500/20 rounded-lg focus:outline-none focus:border-purple-500 text-white text-sm sm:text-base">
-            <input id="userId" type="text" placeholder="Your Unique ID" class="w-full p-3 mb-4 bg-gray-700/50 border border-purple-500/20 rounded-lg focus:outline-none focus:border-purple-500 text-white text-sm sm:text-base">
-            <button onclick="saveProfile()" class="w-full p-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-all duration-300 text-sm sm:text-base">Save</button>
+<body class="bg-gray-900 text-white flex items-center justify-center h-screen">
+
+    <div class="w-full max-w-4xl p-6 bg-gray-800 rounded-lg shadow-lg text-center">
+        <h1 class="text-3xl font-bold mb-4 text-blue-500">🔹 Local Video Call 🔹</h1>
+
+        <div class="mb-4">
+            <label class="block text-lg">Your ID:</label>
+            <input id="myId" class="w-full p-2 text-black rounded-md" readonly>
         </div>
-    </div>
 
-    <!-- Main Interface -->
-    <div id="mainInterface" class="hidden container mx-auto p-4 sm:p-6 max-w-7xl">
-        <header class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-            <div class="flex items-center gap-3 flex-col sm:flex-row text-center sm:text-left">
-                <h1 class="text-2xl sm:text-3xl font-bold text-purple-300">FuturaChat</h1>
-                <div class="flex items-center gap-2">
-                    <span id="currentUser" class="text-xs sm:text-sm text-gray-400"></span>
-                    <span id="connectionStatus" class="px-2 py-1 rounded-full text-xs" style="background: #4B5563">Disconnected</span>
-                </div>
-            </div>
-            <button onclick="resetProfile()" class="px-4 py-2 bg-red-600/50 hover:bg-red-700/50 rounded-lg transition-all duration-300 text-sm sm:text-base">Reset Profile</button>
-        </header>
+        <div class="mb-4">
+            <label class="block text-lg">Enter Friend's ID:</label>
+            <input id="friendId" class="w-full p-2 text-black rounded-md" placeholder="Enter ID">
+        </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
-            <div class="bg-gray-800/80 p-4 sm:p-6 rounded-xl border border-purple-500/20 lg:col-span-1">
-                <h2 class="text-lg sm:text-xl font-bold mb-4 text-purple-300">Connect</h2>
-                <input id="targetId" type="text" placeholder="Enter User ID to connect" class="w-full p-3 mb-4 bg-gray-700/50 border border-purple-500/20 rounded-lg focus:outline-none focus:border-purple-500 text-white text-sm sm:text-base">
-                <button onclick="startCall()" class="w-full p-3 bg-green-600 hover:bg-green-700 rounded-lg transition-all duration-300 text-sm sm:text-base">Start Video Call</button>
-            </div>
+        <button onclick="startCall()" class="w-full p-2 bg-blue-500 hover:bg-blue-600 rounded-md">
+            Start Call
+        </button>
+        <button onclick="acceptCall()" class="w-full p-2 bg-green-500 hover:bg-green-600 rounded-md mt-2">
+            Accept Call
+        </button>
 
-            <div class="bg-gray-800/80 p-4 sm:p-6 rounded-xl border border-purple-500/20 lg:col-span-2">
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <div class="flex-1">
-                        <video id="localVideo" autoplay muted class="w-full rounded-lg border border-purple-500/20 max-h-[40vh] object-cover"></video>
-                        <p class="text-center mt-2 text-xs sm:text-sm text-gray-400">You</p>
-                    </div>
-                    <div class="flex-1">
-                        <video id="remoteVideo" autoplay class="w-full rounded-lg border border-purple-500/20 max-h-[40vh] object-cover"></video>
-                        <p class="text-center mt-2 text-xs sm:text-sm text-gray-400">Remote</p>
-                    </div>
-                </div>
-                <button onclick="endCall()" class="w-full mt-4 p-3 bg-red-600 hover:bg-red-700 rounded-lg transition-all duration-300 hidden text-sm sm:text-base" id="endCallBtn">End Call</button>
-            </div>
-
-            <div class="bg-gray-800/80 p-4 sm:p-6 rounded-xl border border-purple-500/20 lg:col-span-3">
-                <h2 class="text-lg sm:text-xl font-bold mb-4 text-purple-300">Messages</h2>
-                <div id="messages" class="h-64 sm:h-72 overflow-y-auto mb-4 p-4 bg-gray-700/50 rounded-lg"></div>
-                <div class="flex flex-col sm:flex-row gap-2">
-                    <input id="messageInput" type="text" placeholder="Type a message..." class="flex-1 p-3 bg-gray-700/50 border border-purple-500/20 rounded-lg focus:outline-none focus:border-purple-500 text-white text-sm sm:text-base">
-                    <button onclick="sendMessage()" class="px-4 sm:px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-all duration-300 text-sm sm:text-base">Send</button>
-                </div>
-            </div>
+        <div class="flex gap-4 mt-6">
+            <video id="localVideo" autoplay playsinline class="w-1/2 border-2 border-blue-400 rounded-lg"></video>
+            <video id="remoteVideo" autoplay playsinline class="w-1/2 border-2 border-green-400 rounded-lg"></video>
         </div>
     </div>
 
     <script>
-        let localStream;
-        let peerConnection;
-        const messages = document.getElementById('messages');
-        const statusElement = document.getElementById('connectionStatus');
-        const configuration = {
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        };
+const localVideo = document.getElementById('localVideo');
+const remoteVideo = document.getElementById('remoteVideo');
+const myIdField = document.getElementById('myId');
+const friendIdField = document.getElementById('friendId');
 
-        // Simulated signaling server with better connection handling
-        const signalingServer = {
-            connections: {},
-            register: function(userId, callback) {
-                this.connections[userId] = callback;
-                console.log(`Registered user: ${userId}`);
-            },
-            send: function(targetId, data) {
-                data.from = localStorage.getItem('userId');
-                if (this.connections[targetId]) {
-                    this.connections[targetId](data);
-                    return true;
-                } else {
-                    addMessage('System', `Error: User ${targetId} not found or offline`);
-                    return false;
-                }
-            }
-        };
+const peer = new RTCPeerConnection();
+let offerSignal = null; 
 
-        // Profile Setup
-        function saveProfile() {
-            const name = document.getElementById('userName').value;
-            const id = document.getElementById('userId').value;
-            if (name && id) {
-                localStorage.setItem('userName', name);
-                localStorage.setItem('userId', id);
-                document.getElementById('currentUser').textContent = `${name} (ID: ${id})`;
-                document.getElementById('setupModal').classList.add('hidden');
-                document.getElementById('mainInterface').classList.remove('hidden');
-                updateConnectionStatus('Disconnected');
-                
-                signalingServer.register(id, handleSignalingMessage);
-                addMessage('System', 'Profile saved. You can now connect with others using your ID: ' + id);
-            }
-        }
+// Generate a random user ID
+let userId = Math.random().toString(36).substring(2, 10);
+myIdField.value = userId;
 
-        function resetProfile() {
-            localStorage.clear();
-            location.reload();
-        }
+peer.onicecandidate = (event) => {
+    if (event.candidate) {
+        console.log("ICE Candidate:", event.candidate);
+    }
+};
 
-        if (localStorage.getItem('userName') && localStorage.getItem('userId')) {
-            document.getElementById('setupModal').classList.add('hidden');
-            document.getElementById('mainInterface').classList.remove('hidden');
-            document.getElementById('currentUser').textContent = 
-                `${localStorage.getItem('userName')} (ID: ${localStorage.getItem('userId')})`;
-            updateConnectionStatus('Disconnected');
-            signalingServer.register(localStorage.getItem('userId'), handleSignalingMessage);
-        }
+peer.ontrack = (event) => {
+    remoteVideo.srcObject = event.streams[0];
+};
 
-        function updateConnectionStatus(status) {
-            statusElement.textContent = status;
-            statusElement.style.background = status === 'Connected' ? '#22C55E' : '#4B5563';
-        }
+// Get Camera & Mic Access
+navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    .then((stream) => {
+        localVideo.srcObject = stream;
+        stream.getTracks().forEach(track => peer.addTrack(track, stream));
+    })
+    .catch(error => console.error("Error accessing media devices:", error));
 
-        async function startCall() {
-            const targetId = document.getElementById('targetId').value.trim();
-            if (!targetId) {
-                addMessage('System', 'Please enter a target ID');
-                return;
-            }
-            if (targetId === localStorage.getItem('userId')) {
-                addMessage('System', 'Cannot call yourself');
-                return;
-            }
+// Create & Share Offer
+function startCall() {
+    peer.createOffer().then(async (offer) => {
+        await peer.setLocalDescription(offer);
+        offerSignal = JSON.stringify(offer);
+        alert("Send this Offer to Your Friend:\n" + offerSignal);
+    }).catch(error => console.error("Offer creation failed:", error));
+}
 
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                document.getElementById('localVideo').srcObject = localStream;
-
-                peerConnection = new RTCPeerConnection(configuration);
-                
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-                peerConnection.ontrack = event => {
-                    document.getElementById('remoteVideo').srcObject = event.streams[0];
-                    updateConnectionStatus('Connected');
-                    addMessage('System', 'Connected to ' + targetId);
-                };
-
-                peerConnection.onicecandidate = event => {
-                    if (event.candidate) {
-                        signalingServer.send(targetId, {
-                            type: 'candidate',
-                            candidate: event.candidate
-                        });
-                    }
-                };
-
-                peerConnection.onconnectionstatechange = () => {
-                    if (peerConnection.connectionState === 'connected') {
-                        updateConnectionStatus('Connected');
-                    } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'closed') {
-                        updateConnectionStatus('Disconnected');
-                        addMessage('System', 'Connection lost');
-                    }
-                };
-
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                
-                if (signalingServer.send(targetId, {
-                    type: 'offer',
-                    offer: offer
-                })) {
-                    document.getElementById('endCallBtn').classList.remove('hidden');
-                    addMessage('System', `Calling ${targetId}...`);
-                }
-            } catch (error) {
-                console.error('Error starting call:', error);
-                addMessage('System', 'Error starting video call: ' + error.message);
-            }
-        }
-
-        async function handleSignalingMessage(data) {
-            const fromId = data.from;
-            document.getElementById('targetId').value = fromId; // Auto-fill the caller ID
-
-            if (!peerConnection) {
-                peerConnection = new RTCPeerConnection(configuration);
-                
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                document.getElementById('localVideo').srcObject = localStream;
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-                peerConnection.ontrack = event => {
-                    document.getElementById('remoteVideo').srcObject = event.streams[0];
-                    updateConnectionStatus('Connected');
-                    addMessage('System', 'Connected to ' + fromId);
-                };
-
-                peerConnection.onicecandidate = event => {
-                    if (event.candidate) {
-                        signalingServer.send(fromId, {
-                            type: 'candidate',
-                            candidate: event.candidate
-                        });
-                    }
-                };
-
-                peerConnection.onconnectionstatechange = () => {
-                    if (peerConnection.connectionState === 'connected') {
-                        updateConnectionStatus('Connected');
-                    } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'closed') {
-                        updateConnectionStatus('Disconnected');
-                        addMessage('System', 'Connection lost');
-                    }
-                };
-
-                document.getElementById('endCallBtn').classList.remove('hidden');
-            }
-
-            try {
-                if (data.type === 'offer') {
-                    addMessage('System', `Incoming call from ${fromId}`);
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-                    const answer = await peerConnection.createAnswer();
-                    await peerConnection.setLocalDescription(answer);
-                    signalingServer.send(fromId, {
-                        type: 'answer',
-                        answer: answer
-                    });
-                } else if (data.type === 'answer') {
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-                } else if (data.type === 'candidate') {
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-                }
-            } catch (error) {
-                console.error('Signaling error:', error);
-                addMessage('System', 'Error handling call: ' + error.message);
-            }
-        }
-
-        function endCall() {
-            if (peerConnection) peerConnection.close();
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-            }
-            peerConnection = null;
-            document.getElementById('localVideo').srcObject = null;
-            document.getElementById('remoteVideo').srcObject = null;
-            document.getElementById('endCallBtn').classList.add('hidden');
-            updateConnectionStatus('Disconnected');
-            addMessage('System', 'Call ended');
-        }
-
-        function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const message = input.value.trim();
-            if (message) {
-                addMessage(localStorage.getItem('userName'), message);
-                input.value = '';
-            }
-        }
-
-        function addMessage(sender, text) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `p-3 mb-2 rounded-lg ${
-                sender === localStorage.getItem('userName') 
-                ? 'bg-purple-600/50 ml-auto' 
-                : 'bg-gray-700/50'
-            } max-w-[70%] break-words`;
-            messageDiv.innerHTML = `<strong class="text-purple-300">${sender}:</strong> ${text}`;
-            messages.appendChild(messageDiv);
-            messages.scrollTop = messages.scrollHeight;
-        }
-
-        document.getElementById('messageInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
+// Enter Friend's Offer and Connect
+function acceptCall() {
+    let friendOffer = prompt("Enter Friend's Offer:");
+    if (friendOffer) {
+        let parsedOffer = JSON.parse(friendOffer);
+        peer.setRemoteDescription(new RTCSessionDescription(parsedOffer))
+            .then(() => {
+                peer.createAnswer().then(async (answer) => {
+                    await peer.setLocalDescription(answer);
+                    alert("Send this Answer to Your Friend:\n" + JSON.stringify(answer));
+                }).catch(error => console.error("Answer creation failed:", error));
+            })
+            .catch(error => console.error("Setting remote description failed:", error));
+    }
+}
     </script>
 </body>
 </html>
